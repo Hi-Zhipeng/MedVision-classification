@@ -3,8 +3,8 @@ MedVision-Classification - A Medical Image Classification Framework based on PyT
 """
 
 __version__ = "0.1.0"
-__author__ = "Your Name"
-__email__ = "your.email@example.com"
+__author__ = "weizhipeng"
+__email__ = "weizhipeng@shu.edu.cn"
 
 from medvision_cls.models import *
 from medvision_cls.datasets import *

@@ -204,6 +204,6 @@ image_path,label
   title={MedVision-Classification: A PyTorch Lightning Framework for Medical Image Classification},
   author={Your Name},
   year={2025},
-  url={https://github.com/yourusername/medvision-classification}
+  url={https://github.com/Hi-Zhipeng/MedVision-classification}
 }
 ```

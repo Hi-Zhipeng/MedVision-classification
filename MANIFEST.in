@@ -1,0 +1,39 @@
+# Include package metadata
+include pyproject.toml
+include README.md
+include LICENSE
+include CHANGELOG.md
+
+# Include configuration files
+recursive-include configs *.yml *.yaml
+
+# Include documentation
+recursive-include docs *
+prune docs/_build
+
+# Exclude unnecessary files
+exclude .gitignore
+exclude .dockerignore
+exclude Dockerfile
+exclude docker-compose.yml
+exclude *.sh
+
+# Exclude development files
+exclude requirements-dev.txt
+exclude .pre-commit-config.yaml
+prune .git
+prune .github
+prune tests
+prune .pytest_cache
+prune .coverage
+prune htmlcov
+
+# Exclude outputs and data
+prune outputs
+prune data
+prune logs
+
+# Exclude Python cache
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.so

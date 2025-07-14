@@ -1,0 +1,6 @@
+# PyPI Publishing Requirements
+# Install these packages before publishing to PyPI
+
+build>=0.10.0
+twine>=4.0.0
+toml>=0.10.2

@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "medvision-classification"
 version = "0.1.0"
-description = "A PyTorch Lightning framework for medical image classification"
+description = "A comprehensive PyTorch Lightning framework for medical image classification with support for 2D/3D images"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "weizhipeng", email = "weizhipeng@shu.edu.cn"},
 ]
 keywords = ["medical imaging", "classification", "pytorch", "lightning", "deep learning"]
 classifiers = [
@@ -80,10 +80,10 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/medvision-classification"
-Repository = "https://github.com/yourusername/medvision-classification"
-Documentation = "https://medvision-classification.readthedocs.io"
-"Bug Tracker" = "https://github.com/yourusername/medvision-classification/issues"
+Homepage = "https://github.com/Hi-Zhipeng/MedVision-classification"
+Repository = "https://github.com/Hi-Zhipeng/MedVision-classification"
+Documentation = "https://github.com/Hi-Zhipeng/MedVision-classification#readme"
+"Bug Tracker" = "https://github.com/Hi-Zhipeng/MedVision-classification/issues"
 
 [project.scripts]
 medvision-cls = "medvision_cls.cli.main:main"
