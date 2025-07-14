@@ -1,0 +1,99 @@
+# 3D ResNet Training Configuration
+seed: 42
+
+# Model configuration
+model:
+  type: "classification"
+  network:
+    name: "resnet3d_18"  # Options: resnet3d_18, resnet3d_34, resnet3d_50, resnet3d_101, resnet3d_152
+    pretrained: false    # No pretrained weights available for 3D models
+    in_channels: 3       # Number of input channels (typically 1 for medical images)
+    dropout: 0.1
+  num_classes: 2
+
+  # Metrics to compute
+  metrics:
+    accuracy:
+      type: "accuracy"
+    f1:
+      type: "f1"
+    precision:
+      type: "precision"
+    recall:
+      type: "recall"
+    auc:
+      type: "auroc"
+
+  # Loss configuration
+  loss:
+    type: "cross_entropy"
+    weight: null  # Can specify class weights for imbalanced datasets
+    label_smoothing: 0.0
+  
+  # Optimizer configuration
+  optimizer:
+    type: "adam"
+    lr: 0.001
+    weight_decay: 0.0001
+  
+  # Scheduler configuration
+  scheduler:
+    type: "cosine"
+    T_max: 100
+    eta_min: 0.00001
+
+
+# Data configuration
+data:
+  type: "medical"
+  batch_size: 4         # Smaller batch size for 3D data due to memory constraints
+  num_workers: 4
+  data_dir: "data/3D"   # Directory containing 3D data
+  image_format: "*.nii.gz"  # 3D medical image format
+  
+  # Transform configuration for 3D data
+  transforms:
+    image_size: [64, 64, 64]  # [D, H, W] for 3D volumes
+    normalize: true
+    augment: true
+    
+  # Data split configuration
+  train_val_split: [0.8, 0.2]
+  seed: 42
+
+# Training configuration
+training:
+  max_epochs: 5
+  accelerator: "gpu"
+  devices: 1
+  precision: 16         # Use mixed precision to save memory
+  
+  # Callbacks
+  early_stopping:
+    monitor: "val/loss"
+    patience: 10
+    mode: "min"
+  
+  model_checkpoint:
+    monitor: "val/accuracy"
+    mode: "max"
+    save_top_k: 3
+    filename: "epoch_{epoch:02d}-val_acc_{val/accuracy:.3f}"
+
+# Validation configuration
+validation:
+  check_val_every_n_epoch: 1
+
+# Output paths
+paths:
+  output_dir: "outputs"
+  checkpoint_dir: "outputs/checkpoints"
+  log_dir: "outputs/logs"
+
+# Logging
+logging:
+  log_every_n_steps: 10
+  wandb:
+    enabled: false
+    project: "medvision-3d-classification"
+    entity: null

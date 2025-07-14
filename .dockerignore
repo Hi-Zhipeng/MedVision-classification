@@ -1,0 +1,102 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and temporary files
+*.log
+logs/
+outputs/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+
+# Data and model files (too large for Docker context)
+data/
+models/
+checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.h5
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Docker files themselves (avoid recursion)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Configuration files that might contain secrets
+.env
+.env.local
+.env.*.local
+
+# Large media files
+*.mp4
+*.avi
+*.mov
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.nii
+*.nii.gz
+*.dcm
+
+# Temporary testing files
+test_*.py
+*_test.py
+tests/

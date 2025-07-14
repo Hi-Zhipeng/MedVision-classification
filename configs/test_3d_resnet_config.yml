@@ -1,0 +1,60 @@
+# 3D ResNet Test Configuration
+seed: 42
+
+# Model configuration
+model:
+  type: "classification"
+  network:
+    name: "resnet3d_18"  # 3D ResNet network
+    pretrained: false    # No pretrained weights for 3D models
+    in_channels: 3       # Must match training configuration
+    dropout: 0.1
+  num_classes: 2         # Must match training configuration
+
+# Data configuration
+data:
+  type: "medical"
+  batch_size: 4          # Smaller batch size for 3D data due to memory constraints
+  num_workers: 4
+  data_dir: "data/3D"    # 3D data directory
+  
+  # Class configuration
+  class_names: ["class0", "class1"]  # Must match training configuration
+  
+  # Medical image format configuration
+  image_format: "*.nii.gz"  # 3D medical image format (NIfTI)
+  
+  # Transform configuration for 3D data
+  transforms:
+    image_size: [64, 64, 64]  # [D, H, W] - must match training configuration
+    normalize: true
+    augment: false  # No augmentation for testing
+
+# Test configuration
+test:
+  accelerator: "gpu"
+  devices: 1
+  precision: 16
+  
+# Metrics to compute (task type auto-detected from num_classes)
+metrics:
+  accuracy:
+    type: "accuracy"
+  f1:
+    type: "f1"
+  precision:
+    type: "precision"
+  recall:
+    type: "recall"
+  auc:
+    type: "auroc"
+  confusion_matrix:
+    type: "confusion_matrix"
+
+# Output configuration
+output:
+  save_predictions: true
+  save_probabilities: true
+  save_confusion_matrix: true
+  save_classification_report: true
+  output_dir: "outputs/test_results_3d"

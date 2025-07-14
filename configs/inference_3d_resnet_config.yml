@@ -1,0 +1,65 @@
+# 3D ResNet 推理配置文件
+# 该配置文件用于3D医学图像分类推理
+
+# 模型配置 (与训练时保持一致)
+model:
+  type: "classification"
+  network:
+    name: "resnet3d_18"  # 与训练时使用的模型一致
+    pretrained: false
+    in_channels: 1       # 医学图像通常为单通道
+    dropout: 0.1
+  num_classes: 2         # 分类类别数
+
+# 数据配置
+data:
+  type: "medical"
+  data_dir: "data/3D"    # 3D数据目录
+  image_format: "*.nii.gz"
+  
+  # 类别名称 (可选，如果不指定将使用Class_0, Class_1...)
+  class_names:
+    - "Normal"           # 类别0的名称
+    - "Abnormal"         # 类别1的名称
+  
+  # 推理时的数据预处理配置
+  transforms:
+    image_size: [64, 64, 64]  # [D, H, W] 3D体积尺寸
+    normalize: true           # 标准化
+    augment: false           # 推理时不使用数据增强
+    
+    # 强度归一化参数 (可选)
+    intensity_clip_range: [0, 95]  # 强度裁剪百分位数
+    z_score_normalize: true        # Z-score标准化
+    
+  # 推理批次大小
+  batch_size: 4          # 3D数据内存占用大，使用较小批次
+
+# 推理设备配置
+device: "auto"           # auto/cpu/cuda
+
+# 输出配置
+output:
+  save_probabilities: true     # 保存类别概率
+  save_confidence: true        # 保存置信度
+  save_detailed_results: true  # 保存详细结果
+  
+  # 结果输出格式
+  format: "json"              # json/csv
+  
+  # 可视化选项 (可选)
+  visualization:
+    enabled: false
+    save_attention_maps: false
+    slice_visualization: false
+
+# 后处理配置 (可选)
+postprocessing:
+  confidence_threshold: 0.5    # 置信度阈值
+  apply_tta: false            # 测试时数据增强
+  
+# 日志配置
+logging:
+  level: "INFO"              # DEBUG/INFO/WARNING/ERROR
+  save_log: true
+  log_file: "outputs/inference.log"

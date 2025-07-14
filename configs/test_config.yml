@@ -1,0 +1,59 @@
+# General settings
+seed: 42
+
+# Model configuration
+model:
+  type: "classification"
+  network:
+    name: "resnet50"
+    pretrained: true
+  num_classes: 2
+  checkpoint_path: "outputs/checkpoints/epoch_epoch=05-val_acc_val"
+
+# Data configuration
+data:
+  type: "medical"
+  batch_size: 32
+  num_workers: 4
+  data_dir: "data/classification"
+  
+  # Class configuration
+  class_names: ["class0", "class1"]  # Must match training configuration
+  
+  # Medical image format configuration
+  image_format: "*.png"        # 2D image format
+  
+  # Transform configuration (how to process images)
+  transforms:
+    image_size: [224, 224]
+    normalize: true
+    augment: false  # No augmentation for testing
+
+# Test configuration
+test:
+  accelerator: "gpu"
+  devices: 1
+  precision: 16
+  
+# Metrics to compute (task type auto-detected from num_classes)
+metrics:
+  accuracy:
+    type: "accuracy"
+  f1:
+    type: "f1"
+  precision:
+    type: "precision"
+  recall:
+    type: "recall"
+  auc:
+    type: "auroc"
+  confusion_matrix:
+    type: "confusion_matrix"
+
+# Output configuration
+output:
+  save_predictions: true
+  save_probabilities: true
+  save_confusion_matrix: true
+  save_classification_report: true
+  output_dir: "outputs/test_results"
