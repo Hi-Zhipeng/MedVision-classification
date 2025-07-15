@@ -101,7 +101,7 @@ def train_model(
     pl.seed_everything(config.get("seed", 42))
     
     # Create output directories
-    create_output_dirs(config.get("paths", {}))
+    create_output_dirs(config.get("outputs", {}))
     
     # Setup data module
     data_config = config.get("data", {})
@@ -113,6 +113,13 @@ def train_model(
     # Setup model
     model_config = config.get("model", {})
     network_config = model_config.get("network", {}).copy()
+
+    # Task-dim
+    task_dim = config.get("task_dim")
+
+    if task_dim is None:
+        print("No task_dim specified")
+        return
     
     # Extract specific parameters to avoid duplicate keyword arguments
     model_name = network_config.pop("name", "resnet50")
@@ -141,24 +148,76 @@ def train_model(
     # Check if model is 3D to determine deterministic setting
     is_3d_model = "3d" in model_name.lower()
     
+    # Handle devices configuration
+    devices = training_config.get("devices", 1)
+    if isinstance(devices, list):
+        num_devices = len(devices)
+    elif isinstance(devices, int):
+        num_devices = devices
+    else:
+        num_devices = 1
+    
     trainer = pl.Trainer(
         max_epochs=training_config.get("max_epochs", 100),
         accelerator=training_config.get("accelerator", "gpu"),
-        devices=training_config.get("devices", 1),
+        devices=devices,
         precision=training_config.get("precision", 16),
         log_every_n_steps=config.get("logging", {}).get("log_every_n_steps", 10),
-        val_check_interval=config.get("validation", {}).get("check_val_every_n_epoch", 1),
+        check_val_every_n_epoch=config.get("validation", {}).get("check_val_every_n_epoch", 1),
         gradient_clip_val=training_config.get("gradient_clip_val", 1.0),
         callbacks=callbacks,
         logger=logger,
         deterministic=not is_3d_model,  # Disable deterministic for 3D models
+        # 跳过 sanity check 避免空样本问题
+        num_sanity_val_steps=0,
+        # 启用指标聚合
+        enable_progress_bar=True
     )
     
     # Start training
     trainer.fit(model, data_module, ckpt_path=resume_checkpoint)
+
+    # Save training results
+    train_results = trainer.logged_metrics
+
+    test_results = trainer.test(model, data_module, ckpt_path="best")
+
+    save_metrics = config["training"].get("save_metrics", True)
     
-    # Test best model if test data is available
-    if data_module.test_dataset is not None:
-        trainer.test(model, data_module, ckpt_path="best")
-    
+    if save_metrics:
+        import json
+
+        # 提取 best checkpoint callback
+        best_ckpt_cb = None
+        for cb in callbacks:
+            if isinstance(cb, ModelCheckpoint):
+                best_ckpt_cb = cb
+                break
+
+        # 提取 train/val/test 指标
+        train_val_metrics = {
+            k: float(v) for k, v in train_results.items()
+            if isinstance(v, torch.Tensor) and (k.startswith("val/") or k.startswith("train/"))
+        }
+
+        test_metrics = {
+            k: float(v) for k, v in test_results[0].items()
+        } if test_results else {}
+
+        # 汇总结果
+        final_metrics = {
+            "train_val_metrics": train_val_metrics,
+            "test_metrics": test_metrics,
+            "best_model_path": best_ckpt_cb.best_model_path if best_ckpt_cb else None,
+            "best_model_score": float(best_ckpt_cb.best_model_score) if best_ckpt_cb and best_ckpt_cb.best_model_score is not None else None
+        }
+
+        # 保存 JSON 文件
+        result_path = os.path.join(config.get("outputs")["output_dir"], "results.json")
+        os.makedirs(os.path.dirname(result_path), exist_ok=True)
+        with open(result_path, "w") as f:
+            json.dump(final_metrics, f, indent=4)
+
+        print(f"✅ Final metrics saved to: {result_path}")
+
     return trainer, model

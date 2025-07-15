@@ -1,6 +1,8 @@
 # 3D ResNet Training Configuration
 seed: 42
 
+task_dim: 3D
+
 # Model configuration
 model:
   type: "classification"
@@ -85,7 +87,7 @@ validation:
   check_val_every_n_epoch: 1
 
 # Output paths
-paths:
+outputs:
   output_dir: "outputs"
   checkpoint_dir: "outputs/checkpoints"
   log_dir: "outputs/logs"

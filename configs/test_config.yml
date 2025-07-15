@@ -8,12 +8,26 @@ model:
     name: "resnet50"
     pretrained: true
   num_classes: 2
-  checkpoint_path: "outputs/checkpoints/epoch_epoch=05-val_acc_val"
+
+  # Metrics to compute (task type auto-detected from num_classes)
+  metrics:
+    accuracy:
+      type: "accuracy"
+    f1:
+      type: "f1"
+    precision:
+      type: "precision"
+    recall:
+      type: "recall"
+    auc:
+      type: "auroc"
+    confusion_matrix:
+      type: "confusion_matrix"
 
 # Data configuration
 data:
   type: "medical"
-  batch_size: 32
+  batch_size: 1
   num_workers: 4
   data_dir: "data/classification"
   
@@ -35,21 +49,6 @@ test:
   devices: 1
   precision: 16
   
-# Metrics to compute (task type auto-detected from num_classes)
-metrics:
-  accuracy:
-    type: "accuracy"
-  f1:
-    type: "f1"
-  precision:
-    type: "precision"
-  recall:
-    type: "recall"
-  auc:
-    type: "auroc"
-  confusion_matrix:
-    type: "confusion_matrix"
-
 # Output configuration
 output:
   save_predictions: true

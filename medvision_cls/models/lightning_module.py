@@ -132,47 +132,84 @@ class ClassificationLightningModule(pl.LightningModule):
         logits = self(images)
         loss = self.loss_fn(logits, labels)
         
-        # Update metrics
-        self._update_metrics(self.train_metrics, logits, labels)
+        # 计算预测结果
+        preds = torch.softmax(logits, dim=1)
+        pred_classes = torch.argmax(preds, dim=1)
         
-        # Log loss
-        self.log("train/loss", loss, prog_bar=True, on_step=True, on_epoch=True)
+        batch_size = images.size(0)
         
-        self.train_step_outputs.append(loss)
+        # Log loss with sync_dist for multi-GPU
+        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True,
+                 batch_size=batch_size, sync_dist=True)
+        
+        # 计算并记录训练指标
+        for metric_name, metric in self.train_metrics.items():
+            try:
+                if metric_name == "auc":
+                    if self.hparams.num_classes == 2:
+                        metric_value = metric(preds[:, 1], labels)
+                    else:
+                        metric_value = metric(preds, labels)
+                else:
+                    metric_value = metric(pred_classes, labels)
+                
+                self.log(f"train/{metric_name}", metric_value, on_step=False, on_epoch=True,
+                         prog_bar=False, batch_size=batch_size, sync_dist=True)
+                         
+            except Exception as e:
+                print(f"Warning: Failed to compute training metric {metric_name}: {e}")
+        
         return loss
     
     def on_train_epoch_end(self):
-        # Compute and log metrics
-        for metric_name, metric in self.train_metrics.items():
-            value = metric.compute()
-            self.log(f"train/{metric_name}", value, prog_bar=True)
+        # 只重置指标，不进行日志记录
+        for metric in self.train_metrics.values():
             metric.reset()
         
-        self.train_step_outputs.clear()
+        if hasattr(self, 'train_step_outputs'):
+            self.train_step_outputs.clear()
     
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         images, labels = batch["image"], batch["label"]
-
         logits = self(images)
         loss = self.loss_fn(logits, labels)
         
-        # Update metrics
-        self._update_metrics(self.val_metrics, logits, labels)
+        # 计算预测结果
+        preds = torch.softmax(logits, dim=1)
+        pred_classes = torch.argmax(preds, dim=1)
         
-        # Log loss
-        self.log("val/loss", loss, prog_bar=True, on_step=False, on_epoch=True)
+        batch_size = images.size(0)
         
-        self.val_step_outputs.append(loss)
+        # Log loss with sync_dist for multi-GPU
+        self.log("val/loss", loss, prog_bar=True, on_step=False, on_epoch=True,
+                 batch_size=batch_size, sync_dist=True)
+        
+        # 计算并记录验证指标
+        for metric_name, metric in self.val_metrics.items():
+            try:
+                if metric_name == "auc":
+                    if self.hparams.num_classes == 2:
+                        metric_value = metric(preds[:, 1], labels)
+                    else:
+                        metric_value = metric(preds, labels)
+                else:
+                    metric_value = metric(pred_classes, labels)
+                
+                self.log(f"val/{metric_name}", metric_value, prog_bar=True, on_step=False, on_epoch=True,
+                         batch_size=batch_size, sync_dist=True)
+                         
+            except Exception as e:
+                print(f"Warning: Failed to compute validation metric {metric_name}: {e}")
+        
         return loss
     
     def on_validation_epoch_end(self):
-        # Compute and log metrics
-        for metric_name, metric in self.val_metrics.items():
-            value = metric.compute()
-            self.log(f"val/{metric_name}", value, prog_bar=True, on_epoch=True)
+        # 只重置指标，不进行日志记录以避免死锁
+        for metric in self.val_metrics.values():
             metric.reset()
         
-        self.val_step_outputs.clear()
+        if hasattr(self, 'val_step_outputs'):
+            self.val_step_outputs.clear()
     
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         images, labels = batch["image"], batch["label"]
@@ -197,7 +234,7 @@ class ClassificationLightningModule(pl.LightningModule):
         for metric_name, metric in self.test_metrics.items():
             value = metric.compute()
             # Store metric values for later use if needed
-            # self.log(f"test/{metric_name}", value)  # Removed to avoid deadlock
+            self.log(f"test/{metric_name}", value)  # Removed to avoid deadlock
             metric.reset()
         
         self.test_step_outputs.clear()

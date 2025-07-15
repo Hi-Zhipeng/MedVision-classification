@@ -1,6 +1,7 @@
 # 2D ResNet Training Configuration
 seed: 42
 
+task_dim: 2d
 # Model configuration
 model:
   type: "classification"
@@ -43,7 +44,7 @@ model:
 # Data configuration
 data:
   type: "medical"
-  batch_size: 1
+  batch_size: 4  # 增加batch_size以减少总批次数
   num_workers: 4
   data_dir: "data/classification"
   
@@ -62,16 +63,18 @@ data:
 
 # Training configuration
 training:
-  max_epochs: 100
+  max_epochs: 10
   accelerator: "gpu"
-  devices: 1
+  devices: [0,1,2,3]  # 修复devices格式
   precision: 16
+  save_metrics: true
   
   # Callbacks
-  early_stopping:
-    monitor: "val/loss"
-    patience: 10
-    mode: "min"
+  # early_stopping:
+  #   monitor: "val/loss"
+  #   patience: 10
+  #   mode: "min"
+  
   
   model_checkpoint:
     monitor: "val/accuracy"
@@ -81,7 +84,7 @@ training:
 
 # Validation configuration
 validation:
-  check_val_every_n_epoch: 10
+  check_val_every_n_epoch: 1  # 改为每个epoch验证一次
 
 # Class names
 class_names:
@@ -89,7 +92,7 @@ class_names:
   - "Class_1"
 
 # Output paths
-paths:
+outputs:
   output_dir: "outputs"
   checkpoint_dir: "outputs/checkpoints"
   log_dir: "outputs/logs"
