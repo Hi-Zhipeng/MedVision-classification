@@ -6,7 +6,7 @@ task_dim: 2d
 model:
   type: "classification"
   network:
-    name: "resnet50"
+    name: "mobilenet_v3_large"
     pretrained: true
   num_classes: 2
 
@@ -86,10 +86,10 @@ training:
 validation:
   check_val_every_n_epoch: 1  # 改为每个epoch验证一次
 
-# Class names
-class_names:
-  - "Class_0"
-  - "Class_1"
+# # Class names
+# class_names:
+#   - "Class_0"
+#   - "Class_1"
 
 # Output paths
 outputs:

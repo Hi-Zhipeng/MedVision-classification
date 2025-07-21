@@ -3,7 +3,15 @@ Models module for MedVision Classification
 """
 
 from .base_model import BaseClassifier
-from .model_factory import create_model, get_model_info, list_available_models
+from .model_factory import (
+    create_model, 
+    get_model_info, 
+    list_available_models,
+    get_all_model_names,
+    is_3d_model,
+    get_model_input_size,
+    print_model_summary
+)
 from .resnet import ResNetClassifier
 from .resnet3d import ResNet3DClassifier
 from .densenet import DenseNetClassifier
@@ -18,6 +26,10 @@ __all__ = [
     "create_model",
     "get_model_info", 
     "list_available_models",
+    "get_all_model_names",
+    "is_3d_model",
+    "get_model_input_size", 
+    "print_model_summary",
     "ResNetClassifier",
     "ResNet3DClassifier",
     "DenseNetClassifier",
