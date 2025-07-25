@@ -9,7 +9,14 @@ from .base_metric import BaseMetric
 from .basic_metrics import AccuracyMetric, PrecisionMetric, RecallMetric, F1Metric
 
 # Advanced metrics
-from .advanced_metrics import AUROCMetric, SpecificityMetric, ConfusionMatrixMetric, SensitivityMetric
+from .advanced_metrics import (
+    AUROCMetric, 
+    SpecificityMetric, 
+    SensitivityMetric,
+    NPVMetric,
+    PPVMetric,
+    ConfusionMatrixMetric
+)
 
 # Metric collections
 from .metric_collections import (
@@ -32,6 +39,9 @@ from .metric_factory import (
     smart_recall,
     smart_auroc,
     smart_specificity,
+    smart_sensitivity,
+    smart_npv,
+    smart_ppv,
     smart_confusion_matrix,
 )
 
@@ -48,8 +58,10 @@ __all__ = [
     # Advanced metrics
     "AUROCMetric",
     "SpecificityMetric",
-    "ConfusionMatrixMetric",
     "SensitivityMetric",
+    "NPVMetric", 
+    "PPVMetric",
+    "ConfusionMatrixMetric",
     
     # Metric collections
     "ClassificationMetrics",
@@ -71,5 +83,8 @@ __all__ = [
     "smart_recall",
     "smart_auroc",
     "smart_specificity",
+    "smart_sensitivity",
+    "smart_npv",
+    "smart_ppv",
     "smart_confusion_matrix",
 ]

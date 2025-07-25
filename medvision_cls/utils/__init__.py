@@ -42,6 +42,28 @@ from .inference import (
     run_inference_from_config,
 )
 
+# Conditional import for plotting utilities
+try:
+    from .plotting import (
+        ROCPlotter,
+        ConfusionMatrixPlotter,
+        plot_training_curves
+    )
+    _PLOTTING_AVAILABLE = True
+except ImportError:
+    _PLOTTING_AVAILABLE = False
+    # Create dummy classes to avoid AttributeError
+    class ROCPlotter:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("Plotting dependencies (matplotlib, sklearn) not available. Please install them.")
+    
+    class ConfusionMatrixPlotter:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("Plotting dependencies (matplotlib, sklearn) not available. Please install them.")
+    
+    def plot_training_curves(*args, **kwargs):
+        raise ImportError("Plotting dependencies (matplotlib, sklearn) not available. Please install them.")
+
 __all__ = [
     # Helper functions
     "load_config",
@@ -75,4 +97,9 @@ __all__ = [
     "load_model_for_inference",
     "run_inference",
     "run_inference_from_config",
+    
+    # Plotting functions
+    "ROCPlotter",
+    "ConfusionMatrixPlotter",
+    "plot_training_curves",
 ]

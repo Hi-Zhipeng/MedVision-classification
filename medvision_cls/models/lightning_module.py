@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 from torch.optim import Adam, SGD, AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau, StepLR
 from typing import Dict, Any
-from torchmetrics import MetricCollection, Accuracy, F1Score, Precision, Recall, AUROC
+from torchmetrics import MetricCollection, Accuracy, F1Score, Precision, Recall, AUROC, Specificity
 
 from .model_factory import create_model
 from ..losses import create_loss
@@ -84,6 +84,19 @@ class ClassificationLightningModule(pl.LightningModule):
                     metric = Recall(task=task, num_classes=self.hparams.num_classes, average="macro")
                 elif metric_type == "auroc":
                     metric = AUROC(task=task, num_classes=self.hparams.num_classes)
+                elif metric_type == "specificity":
+                    metric = Specificity(task=task, num_classes=self.hparams.num_classes, average="macro")
+                elif metric_type == "sensitivity" or metric_type == "recall":
+                    # Sensitivity is same as Recall
+                    metric = Recall(task=task, num_classes=self.hparams.num_classes, average="macro")
+                elif metric_type == "npv":
+                    # NPV can be calculated using specificity and prevalence, but torchmetrics doesn't have direct NPV
+                    # We'll use a custom implementation through our metrics module
+                    from ..metrics import NPVMetric
+                    metric = NPVMetric(num_classes=self.hparams.num_classes)
+                elif metric_type == "ppv":
+                    # PPV is same as Precision
+                    metric = Precision(task=task, num_classes=self.hparams.num_classes, average="macro")
                 else:
                     print(f"⚠️  Unknown metric type: {metric_type}, skipping")
                     continue
@@ -237,7 +250,85 @@ class ClassificationLightningModule(pl.LightningModule):
             self.log(f"test/{metric_name}", value)  # Removed to avoid deadlock
             metric.reset()
         
+        # Plot ROC curves if we have test step outputs
+        if self.test_step_outputs and self.hparams.num_classes == 2:
+            self._plot_roc_curve()
+        
         self.test_step_outputs.clear()
+    
+    def _plot_roc_curve(self):
+        """Plot ROC curve for test data"""
+        try:
+            import matplotlib.pyplot as plt
+            from sklearn.metrics import roc_curve, auc
+            import numpy as np
+            import os
+            
+            # Collect all predictions and labels
+            all_probs = []
+            all_labels = []
+            
+            for output in self.test_step_outputs:
+                probs = output["preds"].cpu().numpy()
+                labels = output["labels"].cpu().numpy()
+                
+                # For binary classification, use probability of positive class
+                if self.hparams.num_classes == 2:
+                    all_probs.extend(probs[:, 1])  # Probability of class 1
+                else:
+                    all_probs.extend(probs)
+                all_labels.extend(labels)
+            
+            all_probs = np.array(all_probs)
+            all_labels = np.array(all_labels)
+            
+            # Compute ROC curve and AUC
+            fpr, tpr, thresholds = roc_curve(all_labels, all_probs)
+            roc_auc = auc(fpr, tpr)
+            
+            # Create the plot
+            plt.figure(figsize=(8, 6))
+            plt.plot(fpr, tpr, color='darkorange', lw=2, 
+                    label=f'ROC curve (AUC = {roc_auc:.3f})')
+            plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', 
+                    label='Random classifier')
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('Receiver Operating Characteristic (ROC) Curve')
+            plt.legend(loc="lower right")
+            plt.grid(True, alpha=0.3)
+            
+            # Save the plot
+            if hasattr(self.logger, 'log_dir') and self.logger.log_dir:
+                save_dir = self.logger.log_dir
+            else:
+                save_dir = "outputs"
+            
+            os.makedirs(save_dir, exist_ok=True)
+            save_path = os.path.join(save_dir, "roc_curve.png")
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.close()
+            
+            print(f"✅ ROC curve saved to: {save_path}")
+            print(f"📊 Test AUC: {roc_auc:.4f}")
+            
+            # Find optimal threshold using Youden's J statistic
+            j_scores = tpr - fpr
+            optimal_idx = np.argmax(j_scores)
+            optimal_threshold = thresholds[optimal_idx]
+            optimal_sensitivity = tpr[optimal_idx]
+            optimal_specificity = 1 - fpr[optimal_idx]
+            
+            print(f"🎯 Optimal threshold: {optimal_threshold:.4f}")
+            print(f"   Sensitivity: {optimal_sensitivity:.4f}")
+            print(f"   Specificity: {optimal_specificity:.4f}")
+            
+        except Exception as e:
+            print(f"❌ Failed to plot ROC curve: {e}")
+            import traceback
+            traceback.print_exc()
     
     def predict_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
         images = batch["image"]

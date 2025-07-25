@@ -32,6 +32,11 @@ class BaseMetric(nn.Module, ABC):
         """Reset metric state"""
         pass
     
+    def forward(self, preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        """Forward pass - update and compute metric"""
+        self.update(preds, targets)
+        return self.compute()
+    
     def clone(self):
         """Clone the metric for independent usage"""
         # Create a new instance with the same parameters

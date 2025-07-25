@@ -6,7 +6,7 @@ import torch
 from typing import Dict, Any, Union, Type
 from .base_metric import BaseMetric
 from .basic_metrics import AccuracyMetric, PrecisionMetric, RecallMetric, F1Metric
-from .advanced_metrics import AUROCMetric, SpecificityMetric, ConfusionMatrixMetric, SensitivityMetric
+from .advanced_metrics import AUROCMetric, SpecificityMetric, ConfusionMatrixMetric, SensitivityMetric, NPVMetric, PPVMetric
 from .metric_collections import (
     ClassificationMetrics, 
     BinaryClassificationMetrics, 
@@ -24,6 +24,8 @@ METRIC_REGISTRY = {
     "auroc": AUROCMetric,
     "specificity": SpecificityMetric,
     "sensitivity": SensitivityMetric,
+    "npv": NPVMetric,
+    "ppv": PPVMetric,
     "confusion_matrix": ConfusionMatrixMetric,
     "classification_metrics": ClassificationMetrics,
     "binary_metrics": BinaryClassificationMetrics,
@@ -181,9 +183,29 @@ def smart_specificity(num_classes: int, **kwargs):
     return SpecificityMetric(num_classes, **kwargs)
 
 
+def smart_npv(num_classes: int, **kwargs):
+    """Create NPV metric with auto task detection"""
+    return NPVMetric(num_classes, **kwargs)
+
+
+def smart_ppv(num_classes: int, **kwargs):
+    """Create PPV metric with auto task detection"""
+    kwargs.setdefault("average", "macro")
+    return PPVMetric(num_classes, **kwargs)
+
+
+def smart_sensitivity(num_classes: int, **kwargs):
+    """Create sensitivity metric with auto task detection"""
+    kwargs.setdefault("average", "macro")
+    return SensitivityMetric(num_classes, **kwargs)
+
+
 def smart_confusion_matrix(num_classes: int, **kwargs):
     """Create confusion matrix with auto task detection"""
     return ConfusionMatrixMetric(num_classes, **kwargs)
+
+
+# Smart factory functions registry
 
 
 # Smart metrics registry (backward compatibility)
@@ -194,5 +216,8 @@ SMART_METRICS = {
     "recall": smart_recall,
     "auroc": smart_auroc,
     "specificity": smart_specificity,
+    "sensitivity": smart_sensitivity,
+    "npv": smart_npv,
+    "ppv": smart_ppv,
     "confusion_matrix": smart_confusion_matrix,
 }

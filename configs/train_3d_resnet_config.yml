@@ -25,7 +25,14 @@ model:
       type: "recall"
     auc:
       type: "auroc"
-
+    specificity:
+      type: "specificity"
+    sensitivity:
+      type: "sensitivity"
+    npv:
+      type: "npv"
+    ppv:
+      type: "ppv"
   # Loss configuration
   loss:
     type: "cross_entropy"
