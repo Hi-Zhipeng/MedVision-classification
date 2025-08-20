@@ -68,6 +68,64 @@ def predict(config_file: str, input: str, output: str, checkpoint: str, batch_si
     click.echo(f"Inference completed on {len(results)} images. Results saved to: {output}")
 
 
+@cli.command()
+@click.argument("config_file", type=click.Path(exists=True))
+@click.option("--checkpoint", "-c", type=click.Path(exists=True), help="Model checkpoint path")
+@click.option("--output", "-o", type=click.Path(), help="Output ONNX file path")
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+def export_onnx(config_file: str, checkpoint: str = None, output: str = None, verbose: bool = False):
+    """Export trained model to ONNX format"""
+    import torch
+    import os
+    from ..utils.onnx_export import convert_single_model_to_onnx
+    from ..utils.helpers import load_config
+    from ..models.lightning_module import ClassificationLightningModule
+    
+    # Load configuration
+    config = load_config(config_file)
+    
+    # Determine output path
+    if output is None:
+        outputs_config = config.get("outputs", {})
+        output_dir = outputs_config.get("output_dir", "outputs")
+        onnx_dir = os.path.join(output_dir, "onnx")
+        model_name = config.get("model", {}).get("network", {}).get("name", "model")
+        num_classes = config.get("model", {}).get("num_classes", 2)
+        output = os.path.join(onnx_dir, f"{model_name}_classes{num_classes}.onnx")
+    
+    # Create sample input based on config
+    data_config = config.get("data", {})
+    transforms_config = data_config.get("transforms", {})
+    image_size = transforms_config.get("image_size", [224, 224])
+    
+    task_dim = config.get("task_dim", "2d")
+    if task_dim.lower() == "3d" and len(image_size) == 3:
+        sample_input = torch.randn(1, 1, *image_size)
+    else:
+        sample_input = torch.randn(1, 3, *image_size[-2:])
+    
+    # Convert to ONNX
+    result = convert_single_model_to_onnx(
+        checkpoint_path=checkpoint,
+        model_class=ClassificationLightningModule,
+        config=config,
+        sample_input=sample_input,
+        output_path=output,
+        opset_version=config.get("onnx_export", {}).get("opset_version", 11),
+        model_instance=None  # 从checkpoint加载
+    )
+    
+    if result["success"]:
+        click.echo(f"✅ ONNX export successful: {output}")
+        if result.get("validation_passed"):
+            click.echo("✅ ONNX model validation passed")
+        else:
+            click.echo(f"⚠️ ONNX validation: {result.get('validation_error', 'Unknown error')}")
+    else:
+        click.echo(f"❌ ONNX export failed: {result.get('error', 'Unknown error')}")
+        exit(1)
+
+
 def main():
     """Main entry point"""
     cli()

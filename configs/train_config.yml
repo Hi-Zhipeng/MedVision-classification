@@ -76,6 +76,7 @@ training:
   devices: [0,1,2,3]  # 修复devices格式
   precision: 16
   save_metrics: true
+  export_onnx: true  # 训练完成后导出ONNX模型
   
   # Callbacks
   # early_stopping:
@@ -83,12 +84,10 @@ training:
   #   patience: 10
   #   mode: "min"
   
-  
   model_checkpoint:
     monitor: "val/accuracy"
     mode: "max"
-    save_top_k: 3
-    filename: "epoch_{epoch:02d}-val_acc_{val/val_accuracy:.3f}"
+    save_top_k: 1
 
 # Validation configuration
 validation:
@@ -102,8 +101,11 @@ validation:
 # Output paths
 outputs:
   output_dir: "outputs"
-  checkpoint_dir: "outputs/checkpoints"
-  log_dir: "outputs/logs"
+
+# ONNX Export configuration
+onnx_export:
+  opset_version: 11
+onnx_opset_version: 11  # 兼容性配置
 
 # Logging
 logging:

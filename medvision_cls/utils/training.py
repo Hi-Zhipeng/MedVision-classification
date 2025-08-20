@@ -33,16 +33,20 @@ def setup_callbacks(config: Dict[str, Any]) -> list:
     # Model checkpoint
     if "model_checkpoint" in training_config:
         mc_config = training_config["model_checkpoint"]
-        checkpoint_dir = config.get("paths", {}).get("checkpoint_dir", "outputs/checkpoints")
+        # 基于output_dir拼接checkpoint目录
+        output_dir = config.get("outputs", {}).get("output_dir", "outputs")
+        checkpoint_dir = os.path.join(output_dir, "checkpoints")
+        monitor_metric = mc_config.get("monitor", "val/accuracy")
+        monitor_name = monitor_metric.replace("/", "_")
+
         callbacks.append(ModelCheckpoint(
             dirpath=checkpoint_dir,
-            monitor=mc_config.get("monitor", "val/val_accuracy"),
+            monitor=monitor_metric,
             mode=mc_config.get("mode", "max"),
             save_top_k=mc_config.get("save_top_k", 3),
-            filename=mc_config.get("filename", "epoch_{epoch:02d}-val_acc_{val/val_accuracy:.3f}"),
+            filename=f"epoch-{{epoch:02d}}-{{{monitor_name}:.3f}}",
             verbose=True
-        ))
-    
+        ))   
     # Learning rate monitor
     callbacks.append(LearningRateMonitor(logging_interval="epoch"))
     
@@ -54,9 +58,13 @@ def setup_logger(config: Dict[str, Any]):
     logging_config = config.get("logging", {})
     logger_type = logging_config.get("logger", "tensorboard")
     
+    # 基于output_dir拼接log目录
+    output_dir = config.get("outputs", {}).get("output_dir", "outputs")
+    log_dir = os.path.join(output_dir, "logs")
+    
     if logger_type == "tensorboard":
         return TensorBoardLogger(
-            save_dir=logging_config.get("save_dir", "outputs/logs"),
+            save_dir=log_dir,
             name=logging_config.get("name", "medvision_cls"),
             version=logging_config.get("version", None)
         )
@@ -66,7 +74,7 @@ def setup_logger(config: Dict[str, Any]):
             project=wandb_config.get("project", "medvision-classification"),
             entity=wandb_config.get("entity", None),
             tags=wandb_config.get("tags", []),
-            save_dir=logging_config.get("save_dir", "outputs/logs"),
+            save_dir=log_dir,
             name=logging_config.get("name", "medvision_cls"),
             version=logging_config.get("version", None)
         )
@@ -112,28 +120,13 @@ def train_model(
     
     # Setup model
     model_config = config.get("model", {})
-    network_config = model_config.get("network", {}).copy()
 
-    # Task-dim
-    task_dim = config.get("task_dim")
-
-    if task_dim is None:
-        print("No task_dim specified")
-        return
-    
-    # Extract specific parameters to avoid duplicate keyword arguments
-    model_name = network_config.pop("name", "resnet50")
-    pretrained = network_config.pop("pretrained", True)
-    
     model = ClassificationLightningModule(
-        model_name=model_name,
-        num_classes=data_module.num_classes,
-        pretrained=pretrained,
+        model_config=model_config,
         loss_config=model_config.get("loss", {}),
         optimizer_config=model_config.get("optimizer", {}),
         scheduler_config=model_config.get("scheduler", {}),
-        metrics_config=model_config.get("metrics", {}),
-        **network_config
+        metrics_config=model_config.get("metrics", {})
     )
     
     # Setup callbacks
@@ -146,16 +139,13 @@ def train_model(
     training_config = config.get("training", {})
     
     # Check if model is 3D to determine deterministic setting
-    is_3d_model = "3d" in model_name.lower()
-    
+    task_dim = config.get("task_dim", "")
+
+    if task_dim == "":
+        return "Error: task_dim is not set in the config file."
+
     # Handle devices configuration
-    devices = training_config.get("devices", 1)
-    if isinstance(devices, list):
-        num_devices = len(devices)
-    elif isinstance(devices, int):
-        num_devices = devices
-    else:
-        num_devices = 1
+    devices = training_config.get("devices", -1)
     
     trainer = pl.Trainer(
         max_epochs=training_config.get("max_epochs", 100),
@@ -167,10 +157,7 @@ def train_model(
         gradient_clip_val=training_config.get("gradient_clip_val", 1.0),
         callbacks=callbacks,
         logger=logger,
-        deterministic=not is_3d_model,  # Disable deterministic for 3D models
-        # 跳过 sanity check 避免空样本问题
         num_sanity_val_steps=0,
-        # 启用指标聚合
         enable_progress_bar=True
     )
     
@@ -209,8 +196,59 @@ def train_model(
             "train_val_metrics": train_val_metrics,
             "test_metrics": test_metrics,
             "best_model_path": best_ckpt_cb.best_model_path if best_ckpt_cb else None,
-            "best_model_score": float(best_ckpt_cb.best_model_score) if best_ckpt_cb and best_ckpt_cb.best_model_score is not None else None
+            "best_model_score": float(best_ckpt_cb.best_model_score) if best_ckpt_cb and best_ckpt_cb.best_model_score is not None else None,
+            "monitor": config.get("training", {}).get("model_checkpoint", {}).get("monitor", "val/accuracy"),
         }
+
+    # ONNX Export after training - 转换所有保存的top-k模型
+    convert_to_onnx = config.get("training", {}).get("export_onnx", True)
+    converted_models = []
+    onnx_dir = None
+    
+    if convert_to_onnx:
+        print("\n🔄 Starting ONNX conversion for all saved models...")
+        try:
+            from .onnx_export import convert_models_to_onnx
+            from ..models.lightning_module import ClassificationLightningModule
+            
+            # 找到ModelCheckpoint callback
+            checkpoint_callback = None
+            for cb in callbacks:
+                if isinstance(cb, ModelCheckpoint):
+                    checkpoint_callback = cb
+                    break
+            
+            if checkpoint_callback:
+                # 转换所有保存的模型
+                converted_models, onnx_dir = convert_models_to_onnx(
+                    checkpoint_callback=checkpoint_callback,
+                    model_class=ClassificationLightningModule,
+                    config=config,
+                    datamodule=data_module
+                )
+                
+                if converted_models:
+                    print(f"✅ ONNX conversion completed: {len(converted_models)} models converted")
+                    print(f"📁 ONNX models saved to: {onnx_dir}")
+                else:
+                    print("❌ No models were converted to ONNX")
+            else:
+                print("⚠️ No ModelCheckpoint callback found, skipping ONNX conversion")
+                
+        except Exception as e:
+            print(f"❌ ONNX conversion error: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # 汇总并保存最终结果
+    if save_metrics:
+        # 添加ONNX转换信息
+        if convert_to_onnx and converted_models:
+            final_metrics["onnx_conversion"] = {
+                "converted_count": len(converted_models),
+                "onnx_directory": onnx_dir,
+                "models": converted_models
+            }
 
         # 保存 JSON 文件
         result_path = os.path.join(config.get("outputs")["output_dir"], "results.json")

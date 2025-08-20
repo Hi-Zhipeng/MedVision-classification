@@ -8,8 +8,8 @@ model:
   type: "classification"
   network:
     name: "resnet3d_18"  # Options: resnet3d_18, resnet3d_34, resnet3d_50, resnet3d_101, resnet3d_152
-    pretrained: false    # No pretrained weights available for 3D models
-    in_channels: 3       # Number of input channels (typically 1 for medical images)
+    pretrained: false    
+    in_channels: 3       
     dropout: 0.1
   num_classes: 2
 
@@ -55,14 +55,14 @@ model:
 # Data configuration
 data:
   type: "medical"
-  batch_size: 4         # Smaller batch size for 3D data due to memory constraints
+  batch_size: 4         
   num_workers: 4
-  data_dir: "data/3D"   # Directory containing 3D data
-  image_format: "*.nii.gz"  # 3D medical image format
+  data_dir: "data/3D"   
+  image_format: "*.nii.gz" 
   
   # Transform configuration for 3D data
   transforms:
-    image_size: [64, 64, 64]  # [D, H, W] for 3D volumes
+    image_size: [64, 64, 64]  
     normalize: true
     augment: true
     
@@ -75,7 +75,7 @@ training:
   max_epochs: 5
   accelerator: "gpu"
   devices: 1
-  precision: 16         # Use mixed precision to save memory
+  precision: 16         
   
   # Callbacks
   early_stopping:
@@ -86,8 +86,7 @@ training:
   model_checkpoint:
     monitor: "val/accuracy"
     mode: "max"
-    save_top_k: 3
-    filename: "epoch_{epoch:02d}-val_acc_{val/accuracy:.3f}"
+    save_top_k: 1
 
 # Validation configuration
 validation:
@@ -96,8 +95,6 @@ validation:
 # Output paths
 outputs:
   output_dir: "outputs"
-  checkpoint_dir: "outputs/checkpoints"
-  log_dir: "outputs/logs"
 
 # Logging
 logging:

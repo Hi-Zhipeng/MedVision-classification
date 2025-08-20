@@ -179,8 +179,6 @@ class_names:
 # Output paths
 outputs:
   output_dir: "outputs"
-  checkpoint_dir: "outputs/checkpoints"
-  log_dir: "outputs/logs"
 
 # Logging
 logging:
@@ -284,8 +282,6 @@ validation:
 # Output paths
 outputs:
   output_dir: "outputs"
-  checkpoint_dir: "outputs/checkpoints"
-  log_dir: "outputs/logs"
 
 # Logging
 logging:

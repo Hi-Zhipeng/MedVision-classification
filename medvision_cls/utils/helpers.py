@@ -48,11 +48,12 @@ def create_output_dirs(paths_config: Dict[str, str]):
     default_paths = {
         "output_dir": "outputs",
         "checkpoint_dir": "outputs/checkpoints",
-        "log_dir": "outputs/logs"
+        "log_dir": "outputs/logs",
+        "onnx_dir": "outputs/onnx"
     }
     
     paths = {**default_paths, **paths_config}
-    
+
     for path in paths.values():
         Path(path).mkdir(parents=True, exist_ok=True)
 

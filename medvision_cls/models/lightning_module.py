@@ -19,9 +19,7 @@ class ClassificationLightningModule(pl.LightningModule):
     
     def __init__(
         self,
-        model_name: str = "resnet50",
-        num_classes: int = 2,
-        pretrained: bool = True,
+        model_config: Dict[str, Any] = None,
         loss_config: Dict[str, Any] = None,
         optimizer_config: Dict[str, Any] = None,
         scheduler_config: Dict[str, Any] = None,
@@ -29,16 +27,30 @@ class ClassificationLightningModule(pl.LightningModule):
         **model_kwargs
     ):
         super().__init__()
+
         self.save_hyperparameters()
+
+        self.num_classes = model_config.get("num_classes", 2)
+
+        # Remove num_classes from model_kwargs to avoid duplicate arguments
+        model_kwargs_filtered = {k: v for k, v in model_kwargs.items() if k != 'num_classes'}
         
+        # Extract network-specific parameters
+        network_config = model_config.get('network', {})
+        network_kwargs = {k: v for k, v in network_config.items() 
+                         if k not in ['name', 'pretrained']}
+        
+        # Merge network kwargs with model kwargs
+        final_kwargs = {**network_kwargs, **model_kwargs_filtered}
+
         # Create model
         self.model = create_model(
-            model_name=model_name,
-            num_classes=num_classes,
-            pretrained=pretrained,
-            **model_kwargs
+            model_name=network_config.get("name", "resnet50"),
+            num_classes=self.num_classes,
+            pretrained=network_config.get("pretrained", True),
+            **final_kwargs
         )
-        
+
         # Setup loss
         loss_config = loss_config or {"type": "cross_entropy"}
         self.loss_fn = create_loss(loss_config)
@@ -72,31 +84,31 @@ class ClassificationLightningModule(pl.LightningModule):
             print(f"Creating metric: {metric_name} with config: {metric_config}")
             try:
                 metric_type = metric_config.get("type", "accuracy").lower()
-                task = "binary" if self.hparams.num_classes == 2 else "multiclass"
+                task = "binary" if self.num_classes == 2 else "multiclass"
                 
                 if metric_type == "accuracy":
-                    metric = Accuracy(task=task, num_classes=self.hparams.num_classes)
+                    metric = Accuracy(task=task, num_classes=self.num_classes)
                 elif metric_type == "f1":
-                    metric = F1Score(task=task, num_classes=self.hparams.num_classes, average="macro")
+                    metric = F1Score(task=task, num_classes=self.num_classes, average="macro")
                 elif metric_type == "precision":
-                    metric = Precision(task=task, num_classes=self.hparams.num_classes, average="macro")
+                    metric = Precision(task=task, num_classes=self.num_classes, average="macro")
                 elif metric_type == "recall":
-                    metric = Recall(task=task, num_classes=self.hparams.num_classes, average="macro")
+                    metric = Recall(task=task, num_classes=self.num_classes, average="macro")
                 elif metric_type == "auroc":
-                    metric = AUROC(task=task, num_classes=self.hparams.num_classes)
+                    metric = AUROC(task=task, num_classes=self.num_classes)
                 elif metric_type == "specificity":
-                    metric = Specificity(task=task, num_classes=self.hparams.num_classes, average="macro")
+                    metric = Specificity(task=task, num_classes=self.num_classes, average="macro")
                 elif metric_type == "sensitivity" or metric_type == "recall":
                     # Sensitivity is same as Recall
-                    metric = Recall(task=task, num_classes=self.hparams.num_classes, average="macro")
+                    metric = Recall(task=task, num_classes=self.num_classes, average="macro")
                 elif metric_type == "npv":
                     # NPV can be calculated using specificity and prevalence, but torchmetrics doesn't have direct NPV
                     # We'll use a custom implementation through our metrics module
                     from ..metrics import NPVMetric
-                    metric = NPVMetric(num_classes=self.hparams.num_classes)
+                    metric = NPVMetric(num_classes=self.num_classes)
                 elif metric_type == "ppv":
                     # PPV is same as Precision
-                    metric = Precision(task=task, num_classes=self.hparams.num_classes, average="macro")
+                    metric = Precision(task=task, num_classes=self.num_classes, average="macro")
                 else:
                     print(f"⚠️  Unknown metric type: {metric_type}, skipping")
                     continue
@@ -129,7 +141,7 @@ class ClassificationLightningModule(pl.LightningModule):
         for metric_name, metric in metrics.items():
             if metric_name == "auc":
                 # AUC needs probabilities - for binary: preds[:, 1], for multiclass: preds
-                if self.hparams.num_classes == 2:
+                if self.num_classes == 2:
                     metric.update(preds[:, 1], labels)
                 else:
                     metric.update(preds, labels)
@@ -142,6 +154,7 @@ class ClassificationLightningModule(pl.LightningModule):
     
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         images, labels = batch["image"], batch["label"]
+
         logits = self(images)
         loss = self.loss_fn(logits, labels)
         
@@ -159,7 +172,7 @@ class ClassificationLightningModule(pl.LightningModule):
         for metric_name, metric in self.train_metrics.items():
             try:
                 if metric_name == "auc":
-                    if self.hparams.num_classes == 2:
+                    if self.num_classes == 2:
                         metric_value = metric(preds[:, 1], labels)
                     else:
                         metric_value = metric(preds, labels)
@@ -184,6 +197,7 @@ class ClassificationLightningModule(pl.LightningModule):
     
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         images, labels = batch["image"], batch["label"]
+
         logits = self(images)
         loss = self.loss_fn(logits, labels)
         
@@ -201,7 +215,7 @@ class ClassificationLightningModule(pl.LightningModule):
         for metric_name, metric in self.val_metrics.items():
             try:
                 if metric_name == "auc":
-                    if self.hparams.num_classes == 2:
+                    if self.num_classes == 2:
                         metric_value = metric(preds[:, 1], labels)
                     else:
                         metric_value = metric(preds, labels)
@@ -226,6 +240,7 @@ class ClassificationLightningModule(pl.LightningModule):
     
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         images, labels = batch["image"], batch["label"]
+        
         logits = self(images)
         loss = self.loss_fn(logits, labels)
         
@@ -251,7 +266,7 @@ class ClassificationLightningModule(pl.LightningModule):
             metric.reset()
         
         # Plot ROC curves if we have test step outputs
-        if self.test_step_outputs and self.hparams.num_classes == 2:
+        if self.test_step_outputs and self.num_classes == 2:
             self._plot_roc_curve()
         
         self.test_step_outputs.clear()
@@ -273,7 +288,7 @@ class ClassificationLightningModule(pl.LightningModule):
                 labels = output["labels"].cpu().numpy()
                 
                 # For binary classification, use probability of positive class
-                if self.hparams.num_classes == 2:
+                if self.num_classes == 2:
                     all_probs.extend(probs[:, 1])  # Probability of class 1
                 else:
                     all_probs.extend(probs)

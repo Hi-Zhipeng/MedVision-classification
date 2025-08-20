@@ -5,7 +5,7 @@ seed: 42
 model:
   type: "classification"
   network:
-    name: "resnet50"
+    name: "mobilenet_v3_large"
     pretrained: true
   num_classes: 2
 
@@ -32,7 +32,7 @@ data:
   data_dir: "data/classification"
   
   # Class configuration
-  class_names: ["class0", "class1"]  # Must match training configuration
+  # class_names: ["class0", "class1"]  # Must match training configuration
   
   # Medical image format configuration
   image_format: "*.png"        # 2D image format
