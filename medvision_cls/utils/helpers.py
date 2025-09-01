@@ -49,7 +49,7 @@ def create_output_dirs(paths_config: Dict[str, str]):
         "output_dir": "outputs",
         "checkpoint_dir": "outputs/checkpoints",
         "log_dir": "outputs/logs",
-        "onnx_dir": "outputs/onnx"
+        "onnx_dir": "outputs/onnx_models"
     }
     
     paths = {**default_paths, **paths_config}

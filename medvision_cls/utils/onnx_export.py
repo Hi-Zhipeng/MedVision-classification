@@ -8,6 +8,70 @@ import torch
 from typing import Dict, Any, List, Tuple
 
 
+def generate_triton_config(model_name: str, input_shape: List[int], num_classes: int, output_dir: str, onnx_path: str) -> str:
+    """
+    生成Triton配置文件和目录结构
+    
+    Args:
+        model_name: 模型名称
+        input_shape: 输入形状 [batch, channels, height, width] 或 [batch, channels, depth, height, width]
+        num_classes: 类别数量
+        output_dir: 输出目录（onnx_models目录）
+        onnx_path: 原始ONNX文件路径
+        
+    Returns:
+        str: 配置文件路径
+    """
+    # 确定输入维度（去掉batch维度）
+    input_dims = input_shape[1:]
+    
+    # 生成Triton配置内容
+    config_content = f'''name: "{model_name}"
+backend: "onnxruntime_onnx"
+max_batch_size: 8
+
+input [
+  {{
+    name: "input"
+    data_type: TYPE_FP32
+    dims: {input_dims}
+  }}
+]
+
+output [
+  {{
+    name: "output"
+    data_type: TYPE_FP32
+    dims: [{num_classes}]
+  }}
+]
+
+instance_group [
+  {{
+    count: 1
+    kind: KIND_GPU
+  }}
+]
+'''
+    
+    # 创建Triton模型仓库结构: model_name/1/model.onnx
+    model_dir = os.path.join(output_dir, model_name)
+    version_dir = os.path.join(model_dir, "1")
+    os.makedirs(version_dir, exist_ok=True)
+    
+    # 生成Triton模型仓库的配置文件
+    triton_config_path = os.path.join(model_dir, "config.pbtxt")
+    with open(triton_config_path, 'w') as f:
+        f.write(config_content)
+    
+    # 复制ONNX文件到版本目录中，命名为model.onnx
+    import shutil
+    triton_model_path = os.path.join(version_dir, "model.onnx")
+    shutil.copy2(onnx_path, triton_model_path)
+    
+    return triton_config_path
+
+
 def convert_models_to_onnx(
     checkpoint_callback, 
     model_class, 
@@ -32,7 +96,7 @@ def convert_models_to_onnx(
     checkpoint_dir = checkpoint_callback.dirpath
     # 基于output_dir拼接onnx目录
     output_dir = config.get("outputs", {}).get("output_dir", "outputs")
-    onnx_dir = os.path.join(output_dir, "onnx")
+    onnx_dir = os.path.join(output_dir, "onnx_models")
     os.makedirs(onnx_dir, exist_ok=True)
     
     # 获取所有检查点文件
@@ -130,11 +194,28 @@ def convert_models_to_onnx(
             except Exception as e:
                 print(f"⚠ ONNX validation failed: {ckpt_name}, error: {e}")
             
+            # 生成Triton配置文件和目录结构
+            triton_config_path = None
+            try:
+                num_classes = config.get("model", {}).get("num_classes", 2)
+                
+                triton_config_path = generate_triton_config(
+                    model_name=ckpt_name,
+                    input_shape=list(input_shape),
+                    num_classes=num_classes,
+                    output_dir=onnx_dir,
+                    onnx_path=onnx_path
+                )
+                print(f"✓ Triton config and model repository generated: {ckpt_name}")
+            except Exception as e:
+                print(f"⚠ Triton config generation failed for {ckpt_name}: {e}")
+            
             converted_models.append({
                 "checkpoint_path": ckpt_path,
                 "onnx_path": onnx_path,
                 "model_name": ckpt_name,
                 "input_shape": list(input_shape),
+                "triton_config_path": triton_config_path,
                 "original_device": str(model_device) if 'model_device' in locals() else "unknown"
             })
             

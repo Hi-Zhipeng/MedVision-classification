@@ -37,14 +37,13 @@ def setup_callbacks(config: Dict[str, Any]) -> list:
         output_dir = config.get("outputs", {}).get("output_dir", "outputs")
         checkpoint_dir = os.path.join(output_dir, "checkpoints")
         monitor_metric = mc_config.get("monitor", "val/accuracy")
-        monitor_name = monitor_metric.replace("/", "_")
 
         callbacks.append(ModelCheckpoint(
             dirpath=checkpoint_dir,
             monitor=monitor_metric,
             mode=mc_config.get("mode", "max"),
-            save_top_k=mc_config.get("save_top_k", 3),
-            filename=f"epoch-{{epoch:02d}}-{{{monitor_name}:.3f}}",
+            save_top_k=mc_config.get("save_top_k", 1),
+            filename=f"{config['training'].get('experiment_name')}",
             verbose=True
         ))   
     # Learning rate monitor
@@ -116,7 +115,7 @@ def train_model(
     data_module = get_datamodule(data_config)
     
     # Setup data module to get class info for training
-    data_module.setup("fit")
+    # data_module.setup("fit")
     
     # Setup model
     model_config = config.get("model", {})

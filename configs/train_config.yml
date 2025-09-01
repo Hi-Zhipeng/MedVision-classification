@@ -76,7 +76,9 @@ training:
   devices: [0,1,2,3]  # 修复devices格式
   precision: 16
   save_metrics: true
-  export_onnx: true  # 训练完成后导出ONNX模型
+  experiment_name: 'experiment_name'
+  export_onnx: true  
+
   
   # Callbacks
   # early_stopping:

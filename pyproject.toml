@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "medvision-classification"
-version = "0.2.2"
+version = "0.2.3"
 description = "A comprehensive PyTorch Lightning framework for medical image classification with support for 2D/3D images"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -77,6 +77,8 @@ docs = [
 ]
 all = [
     "wandb>=0.15.0",
+    "onnx>=1.12.0",
+    "onnxruntime>=1.12.0",
 ]
 
 [project.urls]

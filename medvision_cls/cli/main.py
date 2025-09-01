@@ -88,7 +88,7 @@ def export_onnx(config_file: str, checkpoint: str = None, output: str = None, ve
     if output is None:
         outputs_config = config.get("outputs", {})
         output_dir = outputs_config.get("output_dir", "outputs")
-        onnx_dir = os.path.join(output_dir, "onnx")
+        onnx_dir = os.path.join(output_dir, "onnx_models")
         model_name = config.get("model", {}).get("network", {}).get("name", "model")
         num_classes = config.get("model", {}).get("num_classes", 2)
         output = os.path.join(onnx_dir, f"{model_name}_classes{num_classes}.onnx")
