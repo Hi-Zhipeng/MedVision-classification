@@ -48,12 +48,9 @@ def test_model(
     
     # Load model from checkpoint
     model_config = config.get("model", {})
-    num_classes = model_config.get("num_classes", data_module.num_classes)
-    
-    model = ClassificationLightningModule.load_from_checkpoint(
-        checkpoint_path,
-        num_classes=num_classes
-    )
+
+    from .pt_checkpoint import load_from_pt
+    model = load_from_pt(checkpoint_path, ClassificationLightningModule, config)
     
     # Setup trainer for testing
     test_config = config.get("test", {})

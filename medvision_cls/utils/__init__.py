@@ -27,6 +27,9 @@ from .training import (
     setup_logger,
 )
 
+from .pt_checkpoint import PTCheckpoint, load_from_pt
+from .pt2onnx import pt_to_onnx
+
 # Import testing functions
 from .testing import (
     test_model,
@@ -64,6 +67,9 @@ __all__ = [
     "train_model",
     "setup_callbacks",
     "setup_logger",
+    "PTCheckpoint",
+    "load_from_pt",
+    "pt_to_onnx",
     
     # Testing functions
     "test_model",

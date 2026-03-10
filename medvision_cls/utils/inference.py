@@ -241,20 +241,9 @@ def load_model_for_inference(
         Loaded model ready for inference
     """
     from ..models import ClassificationLightningModule
-    
-    if config and "model" in config:
-        model_config = config["model"]
-        num_classes = model_config.get("num_classes")
-        
-        if num_classes:
-            model = ClassificationLightningModule.load_from_checkpoint(
-                checkpoint_path,
-                num_classes=num_classes
-            )
-        else:
-            model = ClassificationLightningModule.load_from_checkpoint(checkpoint_path)
-    else:
-        model = ClassificationLightningModule.load_from_checkpoint(checkpoint_path)
+    from .pt_checkpoint import load_from_pt
+
+    model = load_from_pt(checkpoint_path, ClassificationLightningModule, config)
     
     model.eval()
     model = model.to(device)

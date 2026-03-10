@@ -1,0 +1,78 @@
+seed: 42
+task_dim: 2d
+
+model:
+  type: "classification"
+  network:
+    name: "resnet50"
+    pretrained: false
+  num_classes: 10  # airplane/automobile/bird/cat/deer/dog/frog/horse/ship/truck
+
+  metrics:
+    accuracy:
+      type: "accuracy"
+    f1:
+      type: "f1"
+    auc:
+      type: "auroc"
+
+  loss:
+    type: "cross_entropy"
+    label_smoothing: 0.1
+
+  optimizer:
+    type: "adamw"
+    lr: 0.0001
+    weight_decay: 0.0001
+
+  scheduler:
+    type: "cosine"
+    T_max: 50
+    eta_min: 0.000001
+
+data:
+  type: "medical"
+  batch_size: 64
+  num_workers: 4
+  data_dir: "data/cifar10"
+  image_format: "*.png"
+
+  transforms:
+    image_size: [224, 224]
+    normalize: true
+    augment: true
+
+  train_val_split: [0.8, 0.2]
+  seed: 42
+
+training:
+  max_epochs: 50
+  accelerator: "gpu"
+  devices: [0]
+  precision: 16
+  gradient_clip_val: 1.0
+  save_metrics: true
+  experiment_name: "resnet50_cifar10"
+  export_onnx: true
+
+  model_checkpoint:
+    monitor: "val/accuracy"
+    mode: "max"
+
+  early_stopping:
+    monitor: "val/loss"
+    patience: 10
+    mode: "min"
+
+validation:
+  check_val_every_n_epoch: 1
+
+outputs:
+  output_dir: "outputs/resnet50_cifar10"
+
+onnx_opset_version: 18
+
+logging:
+  logger: "tensorboard"
+  name: "resnet50_cifar10"
+  log_every_n_steps: 10
